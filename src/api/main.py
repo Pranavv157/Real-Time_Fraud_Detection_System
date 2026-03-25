@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 import joblib
 import pandas as pd
+from src.api.schema import Transaction
 
 app = FastAPI()
 
-# Load model
 model = joblib.load("models/model.pkl")
+pipeline = joblib.load("models/pipeline.pkl")
 
 
 @app.get("/")
@@ -14,9 +15,15 @@ def home():
 
 
 @app.post("/predict")
-def predict(data: dict):
-    df = pd.DataFrame([data])
-    prediction = model.predict(df)[0]
+def predict(data: Transaction):
+    df = pd.DataFrame([data.model_dump()])
+
+    # APPLY SAME PIPELINE
+    df_transformed = pipeline.transform(df)
+
+    probs = model.predict_proba(df_transformed)[:, 1]
+    threshold = 0.7
+    prediction = (probs > threshold).astype(int)[0]
 
     return {
         "fraud": bool(prediction)
