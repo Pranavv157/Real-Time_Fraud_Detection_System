@@ -17,7 +17,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 #  Train model (with imbalance handling)
-model = LogisticRegression(max_iter=1000, class_weight="balanced")
+model = LogisticRegression(max_iter=5000, class_weight="balanced")
 model.fit(X_train, y_train)
 
 #  Evaluate
