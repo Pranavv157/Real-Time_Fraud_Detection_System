@@ -4,3 +4,6 @@ joblib
 scikit-learn
 xgboost
 pydantic
+mlflow
+python-dotenv
+

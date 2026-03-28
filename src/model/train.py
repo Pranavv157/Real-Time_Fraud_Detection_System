@@ -1,14 +1,30 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report
+from sklearn.metrics import precision_score, recall_score, f1_score
 import joblib
+from pathlib import Path
 
 from src.features.pipeline import create_pipeline
+from src.config import (
+    DATA_PATH,
+    MLFLOW_EXPERIMENT,
+    MLFLOW_TRACKING_URI,
+    MODEL_OUTPUT_PATH,
+    PIPELINE_OUTPUT_PATH,
+    THRESHOLD,
+)
 from xgboost import XGBClassifier  # type: ignore[reportMissingImports]
+import mlflow  # type: ignore[reportMissingImports]
+import mlflow.sklearn # type: ignore[reportMissingImports]
+from sklearn.metrics import confusion_matrix, roc_curve, auc
+import matplotlib.pyplot as plt
+
+# Set local tracking URI and experiment
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment(MLFLOW_EXPERIMENT)
 
 # Load data
-df = pd.read_csv("data/raw/creditcard.csv")
+df = pd.read_csv(DATA_PATH)
 
 X = df.drop("Class", axis=1)
 y = df["Class"]
@@ -38,18 +54,62 @@ model = XGBClassifier(
     eval_metric="logloss"
 )
 
-model.fit(X_train_transformed, y_train)
-# Evaluate
-y_pred = model.predict(X_test_transformed)
-print(classification_report(y_test, y_pred))
+for threshold in [0.3, 0.5, 0.7]:
+    with mlflow.start_run(run_name=f"xgb_threshold_{threshold}"):
 
-y_probs = model.predict_proba(X_test_transformed)[:, 1]
-threshold = 0.7  # try 0.3, 0.5, 0.7
+        model.fit(X_train_transformed, y_train)
 
-y_pred = (y_probs > threshold).astype(int)
+        y_probs = model.predict_proba(X_test_transformed)[:, 1]
+        y_pred = (y_probs > threshold).astype(int)
 
-# Save model and pipeline
-joblib.dump(model, "models/model.pkl")
-joblib.dump(pipeline, "models/pipeline.pkl")
+        # Log parameters
+        mlflow.log_param("model", "xgboost")
+        mlflow.log_param("threshold", threshold)
 
-print("Model and pipeline saved!")
+        # Metrics
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+
+        mlflow.log_metric("precision", precision)
+        mlflow.log_metric("recall", recall)
+        mlflow.log_metric("f1_score", f1)
+
+        print(f"Threshold: {threshold}")
+        print(f"Precision: {precision:.4f}")
+        print(f"Recall: {recall:.4f}")
+        print(f"F1 Score: {f1:.4f}")
+           
+
+        # Confusion Matrix
+        cm = confusion_matrix(y_test, y_pred)
+
+        plt.figure()
+        plt.imshow(cm)
+        plt.title("Confusion Matrix")
+        plt.xlabel("Predicted")
+        plt.ylabel("Actual")
+        plt.colorbar()
+        plt.savefig("confusion_matrix.png")
+        plt.close()
+
+        mlflow.log_artifact("confusion_matrix.png")
+
+        fpr, tpr, _ = roc_curve(y_test, y_probs)
+
+        roc_auc = auc(fpr, tpr)
+
+        plt.figure()
+        plt.plot(fpr, tpr, label=f"AUC = {roc_auc:.4f}")
+        plt.plot([0, 1], [0, 1], linestyle="--")
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.title("ROC Curve")
+        plt.legend()
+        plt.savefig("roc_curve.png")
+        plt.close()
+
+        mlflow.log_metric("roc_auc", roc_auc)
+        mlflow.log_artifact("roc_curve.png")
+
+        mlflow.sklearn.log_model(model, "model")

@@ -1,2 +1,21 @@
+# Secrets / local env
+.env
+
+# Data & exports (paths used in src/config.py)
 data/
 *.csv
+
+# Built ML files (train script writes joblib here; API loads pkl from models/)
+artifacts/
+models/
+
+# MLflow (sqlite URI in config)
+mlflow.db
+mlruns/
+
+# Python
+__pycache__/
+
+# Virtual environment (if you create it in this folder)
+venv/
+.venv/
