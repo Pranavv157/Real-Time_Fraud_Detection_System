@@ -6,4 +6,7 @@ xgboost
 pydantic
 mlflow
 python-dotenv
+uvicorn
+
+
 
