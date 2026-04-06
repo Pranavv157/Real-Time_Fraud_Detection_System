@@ -1,31 +1,32 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import pandas as pd
 
 from src.api.schema import Transaction
-from src.config import MODEL_PATH, PIPELINE_PATH, THRESHOLD
+from src.config import MODEL_PATH, THRESHOLD
 
-app = FastAPI()
+app = FastAPI(title="Fraud Detection API")
 
-model = joblib.load(MODEL_PATH)
-pipeline = joblib.load(PIPELINE_PATH)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-
-@app.get("/")
-def home():
-    return {"message": "Fraud Detection API Running"}
+pipeline = joblib.load(MODEL_PATH)
 
 
 @app.post("/predict")
 def predict(data: Transaction):
     df = pd.DataFrame([data.model_dump()])
 
-    # APPLY SAME PIPELINE
-    df_transformed = pipeline.transform(df)
-
-    probs = model.predict_proba(df_transformed)[:, 1]
-    prediction = (probs > THRESHOLD).astype(int)[0]
+    prob = pipeline.predict_proba(df)[0][1]
+    pred = int(prob > THRESHOLD)
 
     return {
-        "fraud": bool(prediction)
+        "fraud_probability": float(prob),
+        "fraud_prediction": bool(pred)
     }

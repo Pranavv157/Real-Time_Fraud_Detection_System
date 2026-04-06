@@ -1,15 +1,17 @@
 import joblib
 import pandas as pd
-from ..config import MODEL_PATH, PIPELINE_PATH, THRESHOLD
 
-model = joblib.load(MODEL_PATH)
-pipeline = joblib.load(PIPELINE_PATH)
+from ..config import MODEL_PATH, THRESHOLD
+
+#  Load full pipeline (model + scaler)
+pipeline = joblib.load(MODEL_PATH)
+
 
 def predict(data: pd.DataFrame):
-    data_transformed = pipeline.transform(data)
-    probs = model.predict_proba(data_transformed)[:, 1]
+    probs = pipeline.predict_proba(data)[:, 1]
     preds = (probs > THRESHOLD).astype(int)
+
     return {
-    "fraud_probability": float(probs),
-    "fraud_prediction": bool(preds)
-}
+        "fraud_probability": float(probs[0]),
+        "fraud_prediction": bool(preds[0])
+    }
