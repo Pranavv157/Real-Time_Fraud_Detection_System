@@ -27,4 +27,4 @@ MLFLOW_EXPERIMENT = "fraud-detection-v2"
 
 # Inference
 
-THRESHOLD = 0.3
+THRESHOLD = 0.7
