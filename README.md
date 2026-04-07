@@ -1,6 +1,6 @@
-# 🚀 Fraud Detection System (End-to-End ML + Deployment)
+# 🚀 Fraud Detection System (End-to-End ML + Cloud Deployment)
 
-An end-to-end machine learning system for detecting fraudulent transactions using **XGBoost**, with a **production-style FastAPI API**, **Streamlit UI**, **MLflow tracking**, and **Dockerized deployment**.
+An end-to-end machine learning system for detecting fraudulent transactions using **XGBoost**, deployed as a **Dockerized FastAPI service on AWS EC2**, with a **Streamlit frontend**, **MLflow tracking**, and **production-aware design choices**.
 
 ---
 
@@ -8,10 +8,11 @@ An end-to-end machine learning system for detecting fraudulent transactions usin
 
 This project demonstrates how to build a **real-world ML system**, focusing not just on model performance but on:
 
-* Feature consistency
-* API deployment
-* Experiment tracking
-* End-to-end integration
+* Feature consistency between training & inference
+* API-first deployment (FastAPI)
+* Containerization using Docker
+* Cloud deployment on AWS EC2
+* End-to-end integration with a frontend UI
 
 ---
 
@@ -22,8 +23,8 @@ This project demonstrates how to build a **real-world ML system**, focusing not 
 ### Why?
 
 * Simulates **real-time inference constraints**
-* Avoids dependency on unavailable engineered features
-* Ensures **consistent inputs between training and production**
+* Avoids dependency on unavailable engineered features (V1–V28)
+* Ensures **training–serving consistency**
 
 ⚠️ Trade-off: Reduced model accuracy (explained below)
 
@@ -31,7 +32,7 @@ This project demonstrates how to build a **real-world ML system**, focusing not 
 
 # 🏗️ Architecture
 
-```id="arch123"
+```
         ┌──────────────┐
         │ Raw Dataset  │
         └──────┬───────┘
@@ -55,6 +56,7 @@ This project demonstrates how to build a **real-world ML system**, focusing not 
                ↓
         ┌──────────────┐
         │ Saved Model  │
+        │ (artifact)   │
         └──────┬───────┘
                ↓
         ┌──────────────┐
@@ -63,8 +65,21 @@ This project demonstrates how to build a **real-world ML system**, focusing not 
         └──────┬───────┘
                ↓
         ┌──────────────┐
+        │ AWS EC2      │
+        │ Deployment   │
+        └──────┬───────┘
+               ↓
+        ┌──────────────┐
         │ Streamlit UI │
         └──────────────┘
+```
+
+---
+
+# 🌐 Live System Flow
+
+```
+User → Streamlit UI → FastAPI (AWS EC2) → ML Model → Prediction
 ```
 
 ---
@@ -84,124 +99,69 @@ This project demonstrates how to build a **real-world ML system**, focusing not 
 # 📈 Evaluation Insights
 
 * ROC-AUC ≈ **0.78**
-* Model can **rank fraud vs legit reasonably well**
-* However, **prediction confidence is low**
+* Model can **rank fraud vs legitimate transactions**
+* However, **prediction confidence is low due to limited features**
 
 ---
 
 # ⚠️ Why is Precision Low?
 
-This is intentional and an important design trade-off.
-
 ### 1️⃣ Severe Class Imbalance
 
-* Fraud cases ≈ **0.17%**
-* Majority of transactions are legitimate
-
-👉 Leads to naturally low precision
+* Fraud ≈ **0.17%**
+* Leads to very low precision by default
 
 ---
 
 ### 2️⃣ Limited Feature Set
 
-The original dataset contains engineered features (`V1–V28`) derived from PCA.
+Only:
 
-This project uses only:
-
-```text
+```
 Time + Amount
 ```
 
-👉 These features:
+Missing:
 
-* Do NOT capture behavioral patterns
-* Provide weak fraud signals
+* Behavioral signals
+* Transaction history
+* PCA-derived features (V1–V28)
 
 ---
 
-### 3️⃣ Model Confidence Distribution
+### 3️⃣ Model Confidence
 
-The model outputs probabilities mostly in:
-
-```text
-0.01 – 0.20 range
-```
-
-👉 Rarely produces high-confidence predictions
+* Most predictions fall in **0.01–0.20 probability range**
+* Rarely produces high-confidence fraud predictions
 
 ---
 
 # 🧠 Key Insight
 
-> **This project prioritizes system design over raw model performance**
+> This project prioritizes **system design, deployment, and real-world constraints** over raw model accuracy.
 
 ---
 
-# 🖥️ System Workflow
+# 🚀 Deployment (AWS EC2 + Docker)
+# Frontend deployment(Streamlit)
 
-```id="flow123"
-Streamlit UI → FastAPI (Docker) → ML Pipeline → Prediction
-```
 
 ---
 
-# 🚀 Running Locally
+# 🔐 Security Considerations
 
-```bash
-git clone <your-repo>
-cd fraud-mlops
-pip install -r requirements.txt
-```
-
-### Train Model
-
-```bash
-python -m src.model.train
-```
-
-### Run API
-
-```bash
-uvicorn src.api.main:app --reload --port 8001
-```
-
-### Run UI
-
-```bash
-streamlit run ui/app.py
-```
-
----
-
-# 🧪 Example API Request
-
-```json
-{
-  "Time": 10000,
-  "Amount": 500
-}
-```
+* Environment variables used for configuration
+* CORS configured for controlled access
+* API key mechanism can be added for protection
+* EC2 security group restricts exposed ports
 
 ---
 
 # 🐳 Docker
 
-### Build Image
-
 ```bash
 docker build -t fraud-api .
-```
-
-### Run Container
-
-```bash
-docker run -p 8001:8000 fraud-api
-```
-
-👉 API available at:
-
-```
-http://127.0.0.1:8001/docs
+docker run -p 8000:8000 fraud-api
 ```
 
 ---
@@ -215,38 +175,39 @@ http://127.0.0.1:8001/docs
 * FastAPI
 * Streamlit
 * Docker
+* AWS EC2
 
 ---
 
 # 📌 Limitations
 
 * Uses only **Time + Amount**
-* Low precision due to missing behavioral features
-* Not suitable for real-world fraud detection without enhancement
+* Low precision due to missing features
+* No HTTPS (HTTP only via EC2 public IP)
+* Public IP changes when instance restarts
 
 ---
 
 # 🚀 Future Improvements
 
-* Feature engineering (transaction history, user behavior)
+* Feature engineering (behavioral + temporal features)
 * Model explainability (SHAP)
-* MLflow model registry integration
-* Cloud deployment (AWS / Render)
-* Real-time streaming inference
+* HTTPS (Nginx + domain)
+* CI/CD pipeline (GitHub Actions → AWS)
+* Deploy via ECS / serverless instead of EC2
+
 
 ---
 
 # 💡 Key Learnings
 
-* Importance of **feature consistency in ML systems**
-* Handling **data distribution mismatch**
-* Designing **production-ready ML pipelines**
-* Trade-offs between **accuracy vs deployability**
+* Feature consistency is critical in ML systems
+* Docker simplifies reproducibility
+* Cloud infra requires cost awareness
+* ML ≠ just model — it’s a system
 
 ---
 
-# 👨‍💻 Author
 
-Pranav Shinde
 
 ---
