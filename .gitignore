@@ -6,7 +6,7 @@ data/
 *.csv
 
 # Built ML files (train script writes joblib here; API loads pkl from models/)
-artifacts/
+
 models/
 
 # MLflow (sqlite URI in config)
