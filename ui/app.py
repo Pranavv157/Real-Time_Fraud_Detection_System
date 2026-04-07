@@ -2,7 +2,7 @@ import streamlit as st
 import os
 import requests
 
-API_URL = os.getenv("FRAUD_API_URL", "http://127.0.0.1:8001")
+API_URL = os.getenv(API_URL = "http://65.2.129.23:8000")
 
 st.set_page_config(page_title="Fraud Detection", page_icon="💳")
 
